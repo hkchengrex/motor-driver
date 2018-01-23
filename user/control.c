@@ -2,22 +2,22 @@
 #include "debug.h"
 #include "limit.h"
 
-#define PID_POS_KP 18374 //19374 
-#define PID_POS_KI 792 //234 //792 
-#define PID_POS_KD 98 //221 
-#define PID_POS_KV 42 
+#define PID_POS_KP 98498
+#define PID_POS_KI 752
+#define PID_POS_KD 2778
+#define PID_POS_KV 2
 
-#define PID_NEG_KP 18374 //19374
-#define PID_NEG_KI 792 //234 //792  
-#define PID_NEG_KD 98 //221 
-#define PID_NEG_KV 42
+#define PID_NEG_KP 98498 
+#define PID_NEG_KI 752
+#define PID_NEG_KD 2778
+#define PID_NEG_KV 2
 
 #define PID_NEU_KP PID_POS_KP
 #define PID_NEU_KI PID_POS_KI
 #define PID_NEU_KD PID_POS_KD
 #define PID_NEU_KV PID_POS_KV
 
-#define PID_SCALE (1024)
+#define PID_SCALE (512)
 #define MAX_I (CONTROL_FREQ)
 #define MOSFET_REVERSE_COEFF 1/512
 
