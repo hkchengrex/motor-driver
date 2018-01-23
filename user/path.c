@@ -221,7 +221,7 @@ Path* path_iterate(){
 	
 	#define path path[curr_path]
 	
-	if (path.itr < path.t1){
+	if (path.itr < (path.t1-1)){
 		//Acceleration phase
 		const s32 orig_vel = path.tar_vel;
 		
@@ -234,17 +234,17 @@ Path* path_iterate(){
 		path.tar_pos_r = temp % (CONTROL_FREQ*2);
 		path.seg_acc = path.nom_acc;
 		
-	}else if(path.itr == path.t1){
+	}else if(path.itr == (path.t1-1)){
 		//Recali to reduce integration error
 		path.tar_vel = path.vt;
 		path.tar_vel_r = 0;
 		path.tar_pos = path.t1_pt;
 		path.tar_pos_r = 0;
-		
+	}else if (path.itr == path.t1){
 		pt_arrival_feedback(0);
 	}
 	
-	if(path.itr >= path.t1 && path.itr < path.t2){
+	if(path.itr >= path.t1 && path.itr < (path.t2-1)){
 		//Constant phase
 		path.tar_vel = path.vt;
 		path.tar_vel_r = 0;
@@ -253,17 +253,17 @@ Path* path_iterate(){
 		
 		path.seg_acc = 0;
 		
-	}else if(path.itr == path.t2){
+	}else if(path.itr == (path.t2-1)){
 		//Recali to reduce integration error
 		path.tar_vel = path.vt;
 		path.tar_vel_r = 0;
 		path.tar_pos = path.t2_pt;
 		path.tar_pos_r = 0;
-		
+	}else if (path.itr == path.t2){
 		pt_arrival_feedback(1);
 	}
 	
-	if(path.itr >= path.t2 && path.itr < path.t3){
+	if(path.itr >= path.t2 && path.itr < (path.t3-1)){
 		//Deceleration phase
 		const s32 orig_vel = path.tar_vel;
 		
@@ -277,14 +277,14 @@ Path* path_iterate(){
 		
 		path.seg_acc = -path.nom_acc;
 		
-	}else if(path.itr == path.t3){
+	}else if(path.itr == (path.t3-1)){
 		path.tar_pos = path.end_pt;
 		path.tar_pos_r = 0;
 		path.tar_vel = path.ve;
 		path.tar_vel_r = 0;
 		
 		path.seg_acc = 0;
-		
+	}else if (path.itr == path.t3){
 		if (path.ve == 0){
 			path.dir = DIR_NEU;
 		}

@@ -2,7 +2,7 @@
 ** Motor driver - Project Gungnir
 **
 ** This is a generic motor controller program.
-** Please read the files in MotorDriver_Gungnir/wiki for more information.
+** Please read the files in wiki for more information.
 **
 ** ROBOCON 2017
 ** H K U S T
@@ -72,19 +72,19 @@ int main(){
 	uart_init(COM1, 115200); //and the sparks his sparks.
 	limit_init();  //In this fire the god offer the man.
 	led_init();
-	at_mode_init();
 	
 	#ifndef DEBUG_MODE
 		config_debug_uart_pin();
 	#endif
 	
 	//Wait for some time to denoise
-	while(get_ticks() <  1 + this_motor * 2){
+	while(get_ticks() <  1 + this_motor){
 		// (ﾒ3[____]
 		// ZzzzzZzzzzZzzzzzz
 		__asm__("nop");
 	}
 	
+	at_mode_init();
 	control_init(); //Out of that offering the man emerges radiant.
 	
 	#ifdef DEBUG_MODE

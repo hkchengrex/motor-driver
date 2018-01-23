@@ -156,6 +156,8 @@ void encoder_update(void){
 }
 
 bool encoder_malfunction(){
+	if (ENCODER_DISABLED) {return false;}
+	
 	if (encoder_cnt == 0){
 		//Wait for 0.10 sec if encoder has never worked
 		return encoder_loose_count > CONTROL_FREQ/10;
