@@ -42,7 +42,7 @@ extern u8 this_motor;
 #define CONTROL_FREQ 512
 	
 //Direction: 1 or -1
-#define PWM_DIR (1)
+#define PWM_DIR (-1)
 #define ENC_DIR (1)
 
 //Define this if you trust the PID!
