@@ -51,7 +51,7 @@ extern u8 this_motor;
 //Note that this is useless now, but I'm keeping it because I wanted more trust and love in this world :)
 
 #define MAX_ORIG_VEL (150000)
-#define MAX_ORIG_ACC (900000)
+#define MAX_ORIG_ACC (300000)
 
 #define MALF_FLASH_FREQ 42
 #define NORM_FLASH_FREQ 256

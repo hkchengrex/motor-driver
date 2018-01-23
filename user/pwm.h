@@ -6,7 +6,7 @@
 #include "math.h"
 #include "define.h"
 
-#define MAX_PWM									7999
+#define MAX_PWM									15999
 #define MOTOR_TIM								TIM3
 #define MOTOR_TIM_RCC_init()		RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM3, ENABLE)
 
