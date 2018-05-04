@@ -8,7 +8,8 @@
 #include "uart.h"
 
 typedef struct{
-	s32 nom_acc; //Acceleration used in the path, same sign as first segment, cnt/s^-2
+	s32 nom_acc; // Forward acceleration used in the path, same sign as first segment, cnt/s^-2
+	s32 bak_acc; // Backwards acceleration, might be slightly different with @nom_acc due to acceleration smoothing
 	s32 seg_acc; //Acceleration in the current segment, correct sign, cnt/s^-2
 	s32 vt; //Terminal velocity, correct sign, cnt/s^-1
 	s32 ve; //The velocity that it should maintain at the end of the path, cnt/s^-1

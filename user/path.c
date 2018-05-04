@@ -22,13 +22,20 @@ Path* gen_continuous_path(const s32 sn, const s32 v_max, const s32 acc){
 Path* gen_path(s32 v0, s32 s0, s32 vr, s32 sr, s32 sn, s32 v_max, s32 acc){
 	//Safeguard
 	v_max = ABS(v_max);
+	acc = ABS(acc);
 	
 	//Intermediate calculation variables
 	const s32 ds = sn - s0; //Delta distance
 	const s64 v0_sqr = v0 * v0;
-	const s32 acc_mult_2 = 2 * acc;
+	s32 acc_mult_2 = 2 * acc; //Will be smoothed below
+
+	s32 bak_acc = 0;
+	s32 t1 = 0, t2 = 0, t3 = 0;
+	s32 vt = 0, nom_acc = 0;
+	s32 t1_pt = 0, t2_pt = 0;
 	
 	//If u^2 > 2as
+	//This part is rather relaxed and doesn't have the subtle adjustments you will see below
 	if ( (SIGN(v0) == SIGN(ds)) && (v0_sqr > ((s64)acc_mult_2 * ABS(ds)))){
 		//Overshoot is unavoidable T_T
 		//try to stop first and ask for help, which means generating another path
@@ -70,50 +77,64 @@ Path* gen_path(s32 v0, s32 s0, s32 vr, s32 sr, s32 sn, s32 v_max, s32 acc){
 		return (Path*)&path[pend_path];
 	}
 	
+	/**
+	 * A whole lot of subtle vel/acc adjustment adjustment is done here.
+	 * Read the wiki for detail.
+	 * */
+	
 	//Predicated vel needed for min. distance traveled in acc. and dec. phases
 	const s32 tri_vel = Sqrt((s64)acc_mult_2*ABS(ds) + v0_sqr)/1448; //1448 = sqrt(2)*1024
+	if (v_max >= tri_vel){
+		vt = tri_vel * SIGN(ds);
+		//Need triangle path, smoothen velocity
+		//Note that although we can perform the same smoothing operation on tripezium path, we don't
+		//so as to provide velocity guarantee which is critical
 
-	s32 vt, nom_acc;
-	//Determine the shape of the graph
-	if (ds > 0) {
-		//Forward path
-		if (v_max > tri_vel) {
-			//Triangle path
-			vt = tri_vel;
-		}else {
-			//Tripezium path
-			vt = v_max;
-		}
-		nom_acc = acc;
-		
-	}else {
-		//Backward path
-		if (v_max > tri_vel) {
-			//Triangle path
-			vt = -tri_vel;
-		}
-		else {
-			//Tripezium path
-			vt = -v_max;
-		}
-		nom_acc = -acc;
+		//Got optimal tri_vel, now retrace to get time step
+		t1 = ((vt - v0)*CONTROL_FREQ) / acc;
+		t1 = t2 = ABS(t1);
+		//Retrace again for integral velocity
+		vt = (t1*acc/CONTROL_FREQ + v0) * SIGN(ds);
+
+		//Smoothen deceleration in similar manner
+		s32 accel_ds = ((vt + v0) * t1) / CONTROL_FREQ / 2;
+		bak_acc = -(vt * vt) / (ds - accel_ds) / 2;
+
+		//Smooth acceleration enforced by smooth velocity already
+		nom_acc = acc * SIGN(ds);
+		t3 = t2 + (ABS(vt) * CONTROL_FREQ + ABS(bak_acc) - 1) / ABS(bak_acc);
+		t1_pt = t2_pt = accel_ds;
+	}else{
+		//Trapezium path, smoothen acceleration and deceleration, NOT velocity
+		vt = v_max * SIGN(ds);
+		//Smoothen acceleration
+		//Min. time steps to accelerate = ceil[max_v*freq/acc]
+		//Smoothened accel = max_v * freq / min. step
+		s32 abs_dv = ABS(vt - v0);
+		nom_acc = SIGN(vt) * abs_dv * CONTROL_FREQ / ((abs_dv * CONTROL_FREQ + acc - 1) / acc);
+		acc_mult_2 = 2*ABS(nom_acc);
+
+		t1 = abs_dv * CONTROL_FREQ / acc;
+		//The constant velocity phase is the boss. Always respect it.
+		//The following are scaled by @CONTROL_FREQ
+		s64 seg1 = (s64)(t1) * (vt + v0) / 2;
+		s64 seg2 = (s64)(vt) * vt * CONTROL_FREQ / acc / 2 * SIGN(vt); //Use normal acc for now
+		//Let's see how far the mid wants to go
+		s64 seg_mid = ((s64)ds*CONTROL_FREQ - seg1 - seg2);
+		//Trim it to integral distance
+		s32 t_mid = seg_mid / vt;
+		t_mid = ABS(t_mid);
+		seg_mid = t_mid * vt; //Still scaled by @CONTROL_FREQ
+
+		seg2 = ds*CONTROL_FREQ - seg1 - seg_mid;
+		bak_acc = -(vt * vt) / (seg2 / CONTROL_FREQ) / 2;
+
+		t1_pt = s0 + seg1/CONTROL_FREQ;
+		t2_pt = t1_pt + seg_mid/CONTROL_FREQ;
+
+		t2 = t1 + t_mid;
+		t3 = t2 + (v_max * CONTROL_FREQ + ABS(bak_acc) - 1) / ABS(bak_acc);
 	}
-
-	u32 t1, t2, t3;
-	//Calculate the critical time instances for the graph
-	t1 = (vt - v0) * CONTROL_FREQ / nom_acc;
-
-	//The following are scaled by @CONTROL_FREQ
-	s64 seg1 = (s64)(t1) * (vt + v0) / 2;
-	s64 seg2 = (s64)(vt) * vt * CONTROL_FREQ / acc_mult_2 * SIGN(vt);
-	s64 seg_mid = ((s64)ds*CONTROL_FREQ - seg1 - seg2);
-
-	s32 t1_pt, t2_pt;
-	t1_pt = s0 + seg1/CONTROL_FREQ;
-	t2_pt = t1_pt + seg_mid/CONTROL_FREQ;
-	
-	t2 = t1 + seg_mid / (s64)(vt);
-	t3 = t2 + ABS(vt) * CONTROL_FREQ / ABS(acc);
 	
 	//Apply temp variable to actual path
 	const u8 this_path = !pend_path;
@@ -130,6 +151,7 @@ Path* gen_path(s32 v0, s32 s0, s32 vr, s32 sr, s32 sn, s32 v_max, s32 acc){
 	path.vt = vt;
 	path.nom_acc = nom_acc;
 	path.seg_acc = nom_acc;
+	path.bak_acc = bak_acc;
 	
 	path.t1 = t1;
 	path.t2 = t2;
@@ -221,7 +243,8 @@ Path* path_iterate(){
 	
 	#define path path[curr_path]
 	
-	if (path.itr < (path.t1-1)){
+	//if (path.itr < (path.t1-1)){
+	if (path.itr < (path.t1)){
 		//Acceleration phase
 		const s32 orig_vel = path.tar_vel;
 		
@@ -234,17 +257,18 @@ Path* path_iterate(){
 		path.tar_pos_r = temp % (CONTROL_FREQ*2);
 		path.seg_acc = path.nom_acc;
 		
-	}else if(path.itr == (path.t1-1)){
-		//Recali to reduce integration error
-		path.tar_vel = path.vt;
-		path.tar_vel_r = 0;
-		path.tar_pos = path.t1_pt;
-		path.tar_pos_r = 0;
+	// }else if(path.itr == (path.t1-1)){
+	// 	//Recali to reduce integration error
+	// 	path.tar_vel = path.vt;
+	// 	path.tar_vel_r = 0;
+	// 	path.tar_pos = path.t1_pt;
+	// 	path.tar_pos_r = 0;
 	}else if (path.itr == path.t1){
 		pt_arrival_feedback(0);
 	}
 	
-	if(path.itr >= path.t1 && path.itr < (path.t2-1)){
+	//if(path.itr >= path.t1 && path.itr < (path.t2-1)){
+	if(path.itr >= path.t1 && path.itr < (path.t2)){
 		//Constant phase
 		path.tar_vel = path.vt;
 		path.tar_vel_r = 0;
@@ -253,12 +277,12 @@ Path* path_iterate(){
 		
 		path.seg_acc = 0;
 		
-	}else if(path.itr == (path.t2-1)){
-		//Recali to reduce integration error
-		path.tar_vel = path.vt;
-		path.tar_vel_r = 0;
-		path.tar_pos = path.t2_pt;
-		path.tar_pos_r = 0;
+	// }else if(path.itr == (path.t2-1)){
+	// 	//Recali to reduce integration error
+	// 	path.tar_vel = path.vt;
+	// 	path.tar_vel_r = 0;
+	// 	path.tar_pos = path.t2_pt;
+	// 	path.tar_pos_r = 0;
 	}else if (path.itr == path.t2){
 		pt_arrival_feedback(1);
 	}
@@ -267,15 +291,15 @@ Path* path_iterate(){
 		//Deceleration phase
 		const s32 orig_vel = path.tar_vel;
 		
-		path.tar_vel += (-path.nom_acc + path.tar_vel_r) / CONTROL_FREQ;
-		path.tar_vel_r = (-path.nom_acc + path.tar_vel_r) % CONTROL_FREQ;
+		path.tar_vel += (path.bak_acc + path.tar_vel_r) / CONTROL_FREQ;
+		path.tar_vel_r = (path.bak_acc + path.tar_vel_r) % CONTROL_FREQ;
 		
 		//Trapezoidal Rule
 		const s32 temp = (orig_vel + path.tar_vel) + path.tar_pos_r;
 		path.tar_pos += temp / (CONTROL_FREQ*2);
 		path.tar_pos_r = temp % (CONTROL_FREQ*2);
 		
-		path.seg_acc = -path.nom_acc;
+		path.seg_acc = path.bak_acc;
 		
 	}else if(path.itr == (path.t3-1)){
 		path.tar_pos = path.end_pt;
@@ -285,17 +309,6 @@ Path* path_iterate(){
 		
 		path.seg_acc = 0;
 	}else if (path.itr == path.t3){
-		if (path.ve == 0){
-			path.dir = DIR_NEU;
-		}
-		
-		//Reached the end
-		if (next_path_required){
-			gen_continuous_path(next_path_pos, next_path_max_v, next_path_acc);
-		}else if (path.ve == 0){
-			path_static = true;
-		}
-		
 		pt_arrival_feedback(2);
 	}
 	

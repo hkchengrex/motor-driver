@@ -7,7 +7,7 @@
 #define u32 uint32_t
 #define s64 int64_t
 
-#define CONTROL_FREQ 16
+#define CONTROL_FREQ 512
 
 #define DIR_POS 1
 #define DIR_NEU 0
@@ -20,7 +20,7 @@
 
 typedef struct{
 	s32 nom_acc; // Forward acceleration used in the path, same sign as first segment, cnt/s^-2
-	s32 bak_cc; // Backwards acceleration, might be slightly different with @nom_acc due to acceleration smoothing
+	s32 bak_acc; // Backwards acceleration, might be slightly different with @nom_acc due to acceleration smoothing
 	s32 seg_acc; //Acceleration in the current segment, correct sign, cnt/s^-2
 	s32 vt; //Terminal velocity, correct sign, cnt/s^-1
 	s32 ve; //The velocity that it should maintain at the end of the path, cnt/s^-1
@@ -69,12 +69,12 @@ void gen_path(s32 v0, s32 s0, s32 vr, s32 sr, s32 sn, s32 v_max, s32 acc){
 	 * */
 
 	//Predicated vel needed for min. distance traveled in acc. and dec. phases
-	s32 tri_vel = Sqrt((s64)acc_mult_2*ABS((s64)ds) + (s64)v0_sqr)/1448; //1448 = sqrt(2)*1024
+	const s32 tri_vel = Sqrt((s64)acc_mult_2*ABS((s64)ds) + (s64)v0_sqr)/1448; //1448 = sqrt(2)*1024
 	if (v_max >= tri_vel){
 		printf("Triangle\n");
 		vt = tri_vel * SIGN(ds);
 		//Need triangle path, smoothen velocity
-		//Note that although we can perform the same smoothing operation on tripezium path, we don't
+		//Note that although we can perform the same smoothing operation on trapezium path, we don't
 		//so as to provide velocity guarantee which is critical
 
 		//Got optimal tri_vel, now retrace to get time step
@@ -92,8 +92,8 @@ void gen_path(s32 v0, s32 s0, s32 vr, s32 sr, s32 sn, s32 v_max, s32 acc){
 		t3 = t2 + (ABS(vt) * CONTROL_FREQ + ABS(bak_acc) - 1) / ABS(bak_acc);
 		t1_pt = t2_pt = accel_ds;
 	}else{
-		printf("Tripezium\n");
-		//Tripezium path, smoothen acceleration and deceleration, NOT velocity
+		printf("Trapezium \n");
+		//Trapezium  path, smoothen acceleration and deceleration, NOT velocity
 		vt = v_max * SIGN(ds);
 		//Smoothen acceleration
 		//Min. time steps to accelerate = ceil[max_v*freq/acc]
@@ -142,7 +142,7 @@ void gen_path(s32 v0, s32 s0, s32 vr, s32 sr, s32 sn, s32 v_max, s32 acc){
 	path.vt = vt;
 	path.nom_acc = nom_acc;
 	path.seg_acc = nom_acc;
-	path.bak_cc = bak_acc;
+	path.bak_acc = bak_acc;
 	
 	path.t1 = t1;
 	path.t2 = t2;
@@ -213,15 +213,15 @@ void path_iterate(){
 		//Deceleration phase
 		const s32 orig_vel = path.tar_vel;
 		
-		path.tar_vel += (path.bak_cc + path.tar_vel_r) / CONTROL_FREQ;
-		path.tar_vel_r = (path.bak_cc + path.tar_vel_r) % CONTROL_FREQ;
+		path.tar_vel += (path.bak_acc + path.tar_vel_r) / CONTROL_FREQ;
+		path.tar_vel_r = (path.bak_acc + path.tar_vel_r) % CONTROL_FREQ;
 		
 		//Trapezoidal Rule
 		const s32 temp = (orig_vel + path.tar_vel) + path.tar_pos_r;
 		path.tar_pos += temp / (CONTROL_FREQ*2);
 		path.tar_pos_r = temp % (CONTROL_FREQ*2);
 		
-		path.seg_acc = path.bak_cc;
+		path.seg_acc = path.bak_acc;
 		
 	}else if(path.itr == (path.t3-1)){
 		path.tar_pos = path.end_pt;

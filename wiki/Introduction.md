@@ -27,6 +27,8 @@ Gungnir is a generic motor driver program, with PID constants tuned for Faulhabe
 
 2. Position uses 32 bit. It will overflow. Guaranteed not to happen in a 3-minute game though. Using 64 bit will make it buggy, and I have no idea (again) why. Note: Tried to use 64 bits for weeks, no luck. Maybe because it is not atomic?
 
+3. Acceleration/Velocity tweak. [Detail here](tweak.md). Added on May 2018.
+
 ## Constant
 Property | Value | Reference
 --- | --- | ---

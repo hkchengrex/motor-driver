@@ -21,6 +21,7 @@
 ** v3.0 June 2017 (Added limit switches and AT mode)
 ** v3.1 July 2017 (Added real time limit switch monitoring and open loop limit switch handling)
 ** v3.2 July 2017 (Added encoder filter, AT mode fix) 
+** v4.0 May 2018 (Added acceleration and velocity tweak)
 **
 ** “Óðinn á yðr alla!” (“Odin owns all of you!”)
 **
