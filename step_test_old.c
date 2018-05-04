@@ -259,14 +259,16 @@ Path* path_iterate(){
 	path.itr++;
 }
 int main(){
-    gen_path(0, 0, 0, 0, 30000, 15000, 20000);
+	s32 tar = 4000;
+    gen_path(0, 0, 0, 0, tar, 15000, 20000);
+	printf("1: %d 2: %d 3: %d\n", path.t1, path.t2, path.t3);
 
     while(1){
         path_iterate();
 
         printf("%d %d\n", path.tar_pos, path.tar_vel);
 
-        if (path.tar_pos == 30000) break;
+        if (path.tar_pos == tar) break;
     }
 
     return 0;
